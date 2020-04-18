@@ -14,7 +14,7 @@ public:
 	[[eosio::action]]
 	void borrow( const name to, const extended_asset ext_quantity, const string memo )
 	{
-		require_auth( to );
+		// no authority required
 
 		// expand extended asset
 		const name contract = ext_quantity.contract;
