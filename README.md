@@ -16,33 +16,30 @@ Introducing free access to liquidity allows developers to come up with clever sm
 1. `borrow` is the request from the user to borrow a fixed amount of assets which must be paid off by the end of the transaction or else the transaction fails.
 2. `checkbalance` affirms that the contract account has equal or greater balance from the initiation.
 
+**flashloans.hpp**
+
 ```c++
-[[eosio::action]]
-void borrow( const name to, const asset quantity, const string memo )
-{
-    require_auth( to );
-    const name contract = "eosio.token"_n;
+#include <eosio/eosio.hpp>
+#include <eosio/asset.hpp>
 
-    // get initial balance of contract
-    const asset balance = token::get_balance( contract, get_self(), symcode );
-    check( balance.amount >= quantity.amount, "cannot request above current balance");
+using namespace eosio;
+using namespace std;
 
-    // transfer funds to borrower
-    token::transfer_action transfer( contract, { get_self(), "active"_n });
-    transfer.send( get_self(), to, quantity, memo );
+class [[eosio::contract]] flashloans : public contract {
 
-    // check if balance is above
-    checkbalance_action checkbalance( get_self(), { get_self(), "active"_n });
-    checkbalance.send( get_self(), balance );
-}
+public:
+	using contract::contract;
 
-[[eosio::action]]
-void checkbalance( const name account, const asset quantity )
-{
-    // check balance of account, if below the desired amount, fail the transaction
-    const asset balance = token::get_balance( "eosio.token"_n, account, quantity.symbol.code() );
-    check( balance.amount >= quantity.amount, account.to_string() + " must have a balance equal or above " + quantity.to_string() );
-}
+	[[eosio::action]]
+	void borrow( const name to, const extended_asset ext_quantity, const string memo );
+
+	[[eosio::action]]
+	void checkbalance( const name account, const extended_asset ext_quantity );
+
+	// action wrappers
+	using borrow_action = eosio::action_wrapper<"borrow"_n, &flashloans::borrow>;
+	using checkbalance_action = eosio::action_wrapper<"checkbalance"_n, &flashloans::checkbalance>;
+};
 ```
 
 ## Borrower - Basic implementation
@@ -55,7 +52,7 @@ void checkbalance( const name account, const asset quantity )
 ```c++
 [[eosio::action]]
 void execute( const asset quantity ) {
-    // trigger execution of borrowing a flashloans
+    // triggers execution of flashloans
     flashloans::borrow_action borrow( "flashloans"_n, { to, "active"_n });
     borrow.send( get_self(), quantity, "" );
 }
@@ -66,14 +63,11 @@ void on_transfer( const name from, const name to, const asset quantity, const st
     // only intercept transfers from flashloans
     if ( from != "flashloans"_n ) return;
 
-    // incoming token contract
-    const name contract = get_first_receiver();
-
     // do actions before sending funds back
     // =====>>>> PLACE YOUR CODE HERE
 
     // repay flashloan
-    token::transfer_action transfer( contract, { get_self(), "active"_n });
+    token::transfer_action transfer( get_first_receiver(), { get_self(), "active"_n });
     transfer.send( get_self(), from, quantity, memo );
 }
 ```

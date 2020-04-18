@@ -14,7 +14,7 @@ public:
 
 	[[eosio::action]]
 	void execute( const extended_asset ext_quantity ) {
-		// trigger execution of borrowing a flashloans
+		// trigger execution of flashloan
 		flashloans::borrow_action borrowme( "flashloans"_n, { get_self(), "active"_n });
 		borrowme.send( get_self(), ext_quantity, "" );
 	}
@@ -25,14 +25,11 @@ public:
 		// only intercept transfers from flashloans
 		if ( from != "flashloans"_n ) return;
 
-		// incoming token contract
-		const name contract = get_first_receiver();
-
 		// do actions before sending funds back
 		// =====>>>> PLACE YOUR CODE HERE
 
 		// repay flashloan
-		token::transfer_action transfer( contract, { get_self(), "active"_n });
+		token::transfer_action transfer( get_first_receiver(), { get_self(), "active"_n });
 		transfer.send( get_self(), from, quantity, memo );
 	}
 };
