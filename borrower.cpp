@@ -15,8 +15,8 @@ public:
 	[[eosio::action]]
 	void execute( const extended_asset ext_quantity ) {
 		// trigger execution of flashloan
-		flashloans::borrow_action borrowme( "flashloans"_n, { get_self(), "active"_n });
-		borrowme.send( get_self(), ext_quantity, "" );
+		flashloans::borrow_action borrow( "flashloans"_n, { get_self(), "active"_n });
+		borrow.send( get_self(), ext_quantity, "" );
 	}
 
 	[[eosio::on_notify("*::transfer")]]
